@@ -220,3 +220,8 @@ __marimo__/
 # Outputs
 *.csv
 *.png
+*.vtu 
+*.pvd
+*.json
+*.geo*
+*.msh
