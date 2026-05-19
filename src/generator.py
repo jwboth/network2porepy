@@ -31,17 +31,13 @@ Example usage:
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Literal
 import numpy as np
 from .network import FractureNetwork
 from .config import Config, ConstraintsConfig, PostprocessingConfig
 from .distances import (
     line_distance,
     segment_intersection_point,
-    closest_extension_point,
 )
-
-StageIdentifier = Literal["raw", "extended", "y_node_processed"]
 
 
 @dataclass
@@ -1021,7 +1017,6 @@ class FractureGenerator:
         raw_network = FractureNetwork(
             domain=self.config.domain,
             lines=raw_lines,
-            identifier="raw",
             dips=dips,
             colors=["green", "red"],  # TODO self.config.colors,
         )
@@ -1039,7 +1034,8 @@ class FractureGenerator:
             network: Raw fracture network from generate()
 
         Returns:
-            Post-processed network with identifier "y_node_processed"
+            Post-processed network
+
         """
         print("\n[postprocess] Starting extension phase...")
         extended_lines = self._post_processor.extend_fractures(network.lines)
@@ -1062,7 +1058,6 @@ class FractureGenerator:
         return FractureNetwork(
             domain=self.config.domain,
             lines=processed_lines,
-            identifier="y_node_processed",
             dips=network.dips,
             colors=network.colors,
         )

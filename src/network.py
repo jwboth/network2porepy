@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
-from typing import Literal
 
 import numpy as np
 from .config import DomainConfig
-
-StageIdentifier = Literal["raw", "extended", "y_node_processed"]
 
 
 class FractureNetwork:
@@ -19,7 +15,6 @@ class FractureNetwork:
 
     Attributes:
         lines: List of two lists containing fracture lines for each set.
-        identifier: Name of network processing stage (e.g. raw, extended, y_node_processed).
         dips: List of two arrays containing dip angles for each fracture.
         colors: Colors for visualization of each set.
     """
@@ -28,7 +23,6 @@ class FractureNetwork:
         self,
         domain: DomainConfig,
         lines: list[list[np.ndarray]] | None = None,
-        identifier: StageIdentifier = "raw",
         dips: list[np.ndarray] | None = None,
         colors: list[str] | None = None,
     ):
@@ -36,13 +30,11 @@ class FractureNetwork:
 
         Args:
             lines: Fracture lines for each set.
-            identifier: Name of network processing stage.
             dips: Dip angles for each fracture in each set.
             colors: Colors for plotting each set.
         """
         self.domain: DomainConfig = domain
         self.lines: list[list[np.ndarray]] = lines if lines is not None else [[], []]
-        self.identifier = identifier
         self.dips: list[np.ndarray] = (
             dips
             if dips is not None
@@ -140,6 +132,10 @@ class FractureNetwork:
             Boolean matrix of shape (n0, n1) where entry (i,j) is True
             if fracture i from set 0 intersects fracture j from set 1.
         """
+        assert len(self.lines) == 2, (
+            "Expected exactly two sets of fractures for intersection analysis."
+        )
+
         lines = self.get_lines()
         n0, n1 = len(lines[0]), len(lines[1])
 
@@ -165,6 +161,10 @@ class FractureNetwork:
         from each set) that have maximal connectivity for that size.
 
         """
+        assert len(self.lines) == 2, (
+            "Expected exactly two sets of fractures for intersection analysis."
+        )
+
         intersects = self.compute_intersection_matrix()
         n0, n1 = intersects.shape
 
@@ -256,7 +256,6 @@ class FractureNetwork:
         return FractureNetwork(
             domain=domain,
             lines=lines,
-            identifier=self.identifier,
             dips=dips,
             colors=self.colors,
         )
@@ -272,21 +271,9 @@ class FractureNetwork:
         folder = Path(path)
         folder.mkdir(parents=True, exist_ok=True)
 
-        for i in range(2):
-            self._save_to_csv(
-                self.lines[i],
-                self.dips[i],
-                folder / f"{self.identifier}_fractures_{i}.csv",
-            )
-
-        # Main fracture CSV
-        # TODO utilize directly some path coming from outputconfig.
+        # Main fracture CSV (PorePy format)
         csv_path = folder / "fractures.csv"
         with open(csv_path, "w") as f:
-            # f.write(f"DOMAIN_XMIN,DOMAIN_YMIN,DOMAIN_XMAX,DOMAIN_YMAX\n")
-            # f.write(f"... domain bounds ...\n")
-            # f.write(f"fracture_id,start_x,start_y,end_x,end_y,dip_deg,length,family_id\n")
-
             # Write domain in the format
             # "DOMAIN_XMIN, DOMAIN_YMIN, DOMAIN_XMAX, DOMAIN_YMAX \n";
             f.write(
@@ -295,7 +282,6 @@ class FractureNetwork:
 
             # Write line fracture coordinates in the format:
             # P0_X, P0_Y, P0_Z, ..., PN_X, PN_Y, PN_Z
-
             fracture_id = 0
             for family_idx, family_lines in enumerate(self.lines):
                 for line in family_lines:
@@ -325,65 +311,18 @@ class FractureNetwork:
         print(f"Fracture network saved to {folder}.")
 
     @classmethod
-    def load(
-        cls, path: Path | str, identifier: StageIdentifier = "raw"
-    ) -> FractureNetwork:
+    def load(cls, path: Path | str) -> FractureNetwork:
         """Load fracture network from CSV files.
 
         Args:
             path: Directory path containing fracture files.
-            identifier: Name to assign to the loaded network.
 
         Returns:
             FractureNetwork instance with loaded fractures.
         """
-        folder = Path(path)
-        network = cls(identifier=identifier)
-
-        for i in range(2):
-            frac_file = folder / f"{identifier}_fractures_{i}.csv"
-            if not frac_file.exists():
-                # Backward-compatibility with previous naming.
-                frac_file = folder / f"fractures_{i}.csv"
-                if frac_file.exists():
-                    warnings.warn(
-                        f"Loading legacy fracture filename format 'fractures_{i}.csv'. "
-                        f"Use '<identifier>_fractures_{i}.csv' instead.",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-
-            if not frac_file.exists():
-                raise FileNotFoundError(f"Fracture file {frac_file} not found.")
-
-            lines, dips = cls._read_from_csv(frac_file)
-            network.lines[i] = lines
-            network.dips[i] = dips
-
-        return network
-
-    @staticmethod
-    def _save_to_csv(
-        lines: list[np.ndarray], dips: list[float], filename: Path
-    ) -> None:
-        """Save line segments and their orientations to CSV file."""
-        data = []
-        for line, dip in zip(lines, dips):
-            data.append([line[0][0], line[0][1], line[1][0], line[1][1], dip])
-        np.savetxt(filename, data, delimiter=",", header="x1,y1,x2,y2,dip", comments="")
-
-    @staticmethod
-    def _read_from_csv(
-        filename: Path,
-    ) -> tuple[list[np.ndarray], list[float], list[float]]:
-        """Read line segments from CSV file."""
-        data = np.loadtxt(filename, delimiter=",", skiprows=1)
-        lines = []
-        dips = []
-        for row in np.atleast_2d(data):
-            lines.append(np.array([[row[0], row[1]], [row[2], row[3]]]))
-            dips.append(row[4])
-        return lines, dips
+        raise NotImplementedError
+        # folder = Path(path)
+        # network = cls()
 
     # ! ---- Visualization ---- ! #
 
@@ -402,7 +341,7 @@ class FractureNetwork:
         import matplotlib.pyplot as plt
 
         lines = self.get_lines()
-        title = f"Fracture network ({self.identifier})"
+        title = f"Fracture network"
 
         plt.figure()
         for i in range(2):
@@ -420,7 +359,7 @@ class FractureNetwork:
         plt.tight_layout()
 
         if save_path:
-            fname = f"{self.identifier}_network.png"
+            fname = "network.png"
             plt.savefig(Path(save_path) / fname)
 
         if show:

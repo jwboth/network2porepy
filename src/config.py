@@ -72,7 +72,7 @@ class Config:
     postprocessing: PostprocessingConfig
     output: OutputConfig | None = None
     seed: int = 0
-    max_iterations: int = 20000
+    max_iterations: int = 100
 
     def __post_init__(self):
         """Set defaults for optional fields."""

@@ -3,20 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-
+import argparse
 import matplotlib.pyplot as plt
 import pandas as pd
 
 from src.generator import FractureGenerator
-from src.config import (
-    Config,
-    DomainConfig,
-    FamilyConfig,
-    ConstraintsConfig,
-    PostprocessingConfig,
-    NormalParams,
-    OutputConfig,
-)
+from src.loader import ConfigLoader
 from src.network import FractureNetwork
 
 
@@ -26,77 +18,43 @@ output = Path(__file__).parent / "output"
 def main():
     """Generate a biconjugate fracture network and save results."""
 
-    regenerate_networks = True
-    N_seeds = 5
-    N_fractures = 10
-    # dips = [
-    #     [30 + 0 * 45, 60 + 0 * 45],
-    #     # [30 + 1 * 45, 60 + 1 * 45],
-    #     # [30 + 2 * 45, 60 + 2 * 45],
-    #     # [30 + 3 * 45, 60 + 3 * 45],
-    # ]
+    parser = argparse.ArgumentParser(description="Fracture Network Generator")
+    parser.add_argument("--load", action="store_true", help="Load existing networks")
+    parser.add_argument(
+        "--n_seeds", type=int, default=20, help="Number of random seeds"
+    )
+
+    args = parser.parse_args()
+
+    load_networks = args.load
+    N_seeds = args.n_seeds
+
+    config = ConfigLoader.load(Path(__file__).parent / f"config.toml")
 
     # Generate networks for multiple seeds
     analysis_results = []
     for seed in range(N_seeds):
-        config = Config(
-            domain=DomainConfig(xmin=-500, xmax=500, ymin=-3000, ymax=-2000),
-            subdomain=DomainConfig(xmin=-25, xmax=25, ymin=-2525, ymax=-2475),
-            families=[
-                # Family 1
-                FamilyConfig(
-                    target_num=N_fractures,
-                    major_axis_length=NormalParams(50, 5),
-                    rotation_deg=NormalParams(30, 5),
-                ),
-                # Family 2
-                FamilyConfig(
-                    target_num=N_fractures,
-                    major_axis_length=NormalParams(50, 5),
-                    rotation_deg=NormalParams(60, 5),
-                ),
-            ],
-            constraints=ConstraintsConfig(
-                min_distance=5,
-                min_intersecting_angle_deg_self=10,
-                min_intersecting_angle_deg_other=20,
-                min_intersection_distance=5,
-            ),
-            postprocessing=PostprocessingConfig(
-                extension_threshold=5,
-                extension_max_iterations=10,
-                branch_proximity_tolerance=5,
-                trim_short_branch_length=5,
-            ),
-            seed=seed,
-            max_iterations=100,
-        )
+        # Overwrite seed
+        config.seed = seed
 
+        # Data management
         output_network = output / f"seed_{seed}"
         output_raw = output_network / "raw"
         output_y_node = output_network / "y_node_processed"
 
-        if regenerate_networks:
+        if load_networks:
+            raw_network = FractureNetwork.load(output_raw)
+            y_node_network = FractureNetwork.load(output_y_node)
+        else:
             generator = FractureGenerator(config)
 
             print("Generating fractures...")
-            # raw_network, extended_network, y_node_network = generator.generate()
             raw_network = generator.generate()
             y_node_network = generator.postprocess(raw_network)
 
             # Sort fractures to maximize connectivity
             raw_network.sort()
             y_node_network.sort()
-
-            # Analyze
-            # metrics = raw_network.analyze_complexity()
-            metrics = y_node_network.analyze_complexity()
-
-            num_fracs = sum(metrics["num_fractures"])
-            connectivity = metrics["connectivity"]
-            print(
-                f"\nGenerated {num_fracs} fractures with {connectivity} intersections"
-            )
 
             # Data management
             output_raw.mkdir(exist_ok=True, parents=True)
@@ -112,15 +70,11 @@ def main():
             # User feedback
             print(f"\nResults saved to {output_network}")
 
-        else:
-            raw_network = FractureNetwork.load(output_raw, identifier="raw")
-            y_node_network = FractureNetwork.load(
-                output_y_node, identifier="y_node_processed"
-            )
-
-        # assert False, "continue here"
-
         # Overall analysis for sub-networks
+        # Extract N_fractures from config.
+        N_fractures = max(
+            config.families[i].target_num for i in range(len(config.families))
+        )
         for n_fracs in range(1, N_fractures + 1):
             y_node_sub_network = y_node_network.get_subset(n_fracs, n_fracs)
             metrics = y_node_sub_network.analyze_complexity()
