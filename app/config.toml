@@ -1,0 +1,60 @@
+# Box domain dimensions.
+[domain]
+xmin = -500.0
+ymin = -3000.0
+xmax = 500.0
+ymax = -2000.0
+
+# Box subdomain dimensions (for fractures)
+[subdomain]
+xmin = -25.0
+ymin = -2525.0
+xmax = 25.0
+ymax = -2475.0
+
+# Main constraints.
+[constraints]
+min_distance = 5 # Minimum distance between fractures.
+min_intersecting_angle_deg_self = 10.0 # Minimum angle between intersecting fractures of the same family.
+min_intersecting_angle_deg_other = 20.0 # Minimum angle between intersecting fractures of different families.
+min_intersection_distance = 5 # Minimum distance between non-intersecting fractures.
+
+# Post-processing parameters.
+[postprocessing]
+extension_threshold = 5 # Distance threshold for extending fractures to connect them.
+extension_max_iterations = 10 # Maximum number of iterations for the extension process.
+branch_proximity_tolerance = 5.0 # Distance threshold for considering branches to be close enough to shorten them.
+trim_short_branch_length = 5.0 # Length threshold for trimming short branches.
+
+# Fracture properties.
+[sampler]
+num = 2 # number of fracture families to sample. Each family is defined in a section [sampler.i], where i is the family index starting from 1.
+
+# Family #1.
+# Target 5 disks, with major axis length mean 50 and stddev 10,
+# minor axis length mean 50 and stddev 5, and rotation angles
+# with mean 0 and stddev 7.5 degrees.
+[sampler.1]
+target_num = 10 # number of fractures to sample for this family
+# type = "main"
+
+# All distributions here are normal distributions, defined by a mean and a standard deviation.
+[sampler.1.major_axis_length]
+mean = 50.0 # mean of the major axis length distribution
+stddev = 10.0 # standard deviation of the major axis length distribution
+
+[sampler.1.rotation_deg]
+mean = 60.0 # mean of the rotation angle distribution around x-axis (in degrees)
+stddev = 7.5 # standard deviation of the rotation angle distribution around x-axis (in degrees)
+
+# Fracture family 2. Similar to family 1, but with different parameters.
+[sampler.2]
+target_num = 10
+
+[sampler.2.major_axis_length]
+mean = 50.0
+stddev = 10.0
+
+[sampler.2.rotation_deg]
+mean = 30.0
+stddev = 7.5
