@@ -84,8 +84,9 @@ self.fracture_network = pp.fracture_importer.network_from_csv(
 
 The first line of `fractures.csv` defines the domain; subsequent lines define elliptical fractures.
 
-The `SinglePhaseFlowGeometry` class combines the imported geometry with PorePy's `SinglePhaseFlow` model. Running `pp.ModelRunner(model).run()` meshes, assembles, solves, and exports results.
+The `SinglePhaseFlowGeometry` class combines the imported geometry with PorePy's `SinglePhaseFlow` model. Running `pp.ModelRunner(model).run()` meshes, assembles, solves, and exports results. An example mesh:
 
+![Fracture network example](example.png)
 
 ---
 
