@@ -227,42 +227,6 @@ class ConstraintChecker:
         return True, ""
 
 
-# @dataclass
-# class ConstraintChecker:
-#     """Encapsulates constraint evaluation logic (mirrors 3D ConstraintsMatrix)."""
-
-#     constraints: ConstraintsConfig
-
-#     def check_distance_constraint(
-#         self, line: np.ndarray, existing_lines: list[np.ndarray]
-#     ) -> bool:
-#         """Check if line respects distance constraints vs existing lines."""
-#         if not existing_lines:
-#             return True
-#         dists = [line_distance(line, existing) for existing in existing_lines]
-#         return all(self.min_dist <= d <= self.max_dist for d in dists)
-
-#     def check_intersection_constraint(
-#         self, line: np.ndarray, existing_lines: list[np.ndarray]
-#     ) -> bool:
-#         """Check if line doesn't intersect with existing lines in same family."""
-#         # TODO replace with check using min_intersecting_angle_deg_self
-#         return not any(
-#             FractureNetwork._check_intersection(line, existing)
-#             for existing in existing_lines
-#         )
-
-#     def evaluate(
-#         self, line: np.ndarray, family_lines: list[np.ndarray]
-#     ) -> tuple[bool, str]:
-#         """Evaluate all constraints. Returns (accepted, reason)."""
-#         if not self.check_intersection_constraint(line, family_lines):
-#             return False, "self_intersection"
-#         if not self.check_distance_constraint(line, family_lines):
-#             return False, "distance_violation"
-#         return True, "accepted"
-
-
 @dataclass
 class ConstraintMatrix:
     """Encapsulates self-family and cross-family constraint evaluation."""
@@ -1117,7 +1081,7 @@ class FractureGenerator:
         iteration = 0
         exponent = 0.0
         while not self._status.finished() and iteration < cfg.max_iterations:
-            # Random family selection (mirrors 3D multiSampler(id))
+            # Random family selection
             family_idx = self._rng.integers(0, len(cfg.families))
 
             # Skip if family is complete
