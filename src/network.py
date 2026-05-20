@@ -161,9 +161,9 @@ class FractureNetwork:
         from each set) that have maximal connectivity for that size.
 
         """
-        assert len(self.lines) == 2, (
-            "Expected exactly two sets of fractures for intersection analysis."
-        )
+        if len(self.lines) != 2:
+            warn("Expected exactly two sets of fractures for intersection analysis.")
+            return
 
         intersects = self.compute_intersection_matrix()
         n0, n1 = intersects.shape
